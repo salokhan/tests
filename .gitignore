@@ -1,0 +1,11 @@
+# Secret Files
+config/env/db.json
+
+# Generated Files
+.DS_Store
+npm-debug.log
+**/node_modules/
+*.swp
+*.swo
+*.orig
+logs/*.log
