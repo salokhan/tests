@@ -1,0 +1,431 @@
+swagger: "2.0"
+info:
+  description: "This is a sample swagger doc detailing the supplier POST route for upwork contracts"
+  version: "0.0.1"
+  title: "Distributable Swagger Doc"
+  contact:
+    email: "daniel@mynuance.ca"
+host: "localhost:8080"
+basePath: /api/v1
+schemes:
+  # tip: remove http to make production-grade
+  - http
+  - https
+# format of bodies a client can send (Content-Type)
+consumes:
+  - application/json
+# format of the responses to the client (Accepts)
+produces:
+  - application/json
+tags:
+- name: "Suppliers"
+  description: "Supplier Endpoints"
+paths:
+  /suppliers:    
+    x-swagger-router-controller: suppliers
+    get:
+      tags:
+      - "Suppliers"
+      summary: "Get a list of suppliers"
+      operationId: getSuppliers
+      produces:
+      - "application/json"
+      parameters:
+      - in: "query"
+        name: "name"
+        description: "Name of the supplier"
+        type: "string"
+      - in: "query"
+        name: "contact"
+        description: "Contact of the supplier"
+        type: "string"
+      - in: "query"
+        name: "keywords"
+        description: "Keywords of the supplier"
+        type: "string"
+      - in: "query"
+        name: "terms"
+        description: "Contract terms for the supplier"
+        type: "string"
+      - in: "query"
+        name: "account"
+        description: "Account number"
+        type: "string"
+      - in: "query"
+        name: "currency"
+        description: "Currency code of the supplier"
+        type: "string"
+        enum:
+          - "CAD"
+          - "USD"
+          - "EUR"
+      - in: "query"
+        name: "field"
+        description: "Limit the fields to be returned"
+        type: "array"
+        uniqueItems: true
+        items:
+          type: string
+        default:
+          - '*'
+      - in: "query"
+        name: "sort"
+        description: "Field on which to sort the returned suppliers"
+        type: "string"
+      - in: "query"
+        name: "order"
+        description: "Order by which to order the sorted suppliers"
+        type: "string"
+        enum:
+          - "ASC"
+          - "DESC"
+      - in: "query"
+        name: "limit"
+        description: "Limit the number of returned result"
+        type: "integer"
+        format: "int32"
+        default: 50
+        minimum: 1
+      - in: "query"
+        name: "offset"
+        description: "Offset the number of returned result from an index of 0"
+        type: "integer"
+        format: "int64"
+        default: 0
+        minimum: 0
+      responses:
+        200:
+          description: "Successfully Retrieved Suppliers"
+          schema:
+            type: "object"
+            properties:
+              results:
+                type: "array"
+                items:
+                  $ref: "#/definitions/Supplier"
+              message: 
+                type: "string"
+                description: "If empty result, it shall state 'No results were found'. If results found, it shall state 'Found X result(s)"
+              total:
+                type: "integer"
+                description: "The actual number of suppliers found"
+              offset:
+                type: "integer"
+                description: "The returned return offset from an index of 0"
+              limit:
+                type: "integer"
+                description: "Limits the number of results returned"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+    post:
+      tags:
+      - "Suppliers"
+      summary: "Create a new supplier"
+      operationId: createSupplier
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Supplier object that needs to be added to the store"
+        required: true
+        schema:
+          $ref: "#/definitions/SupplierCreate"
+      responses:
+        201:
+          description: "Successfully Created Supplier"
+          schema:
+            type: "object"
+            properties:
+              data:
+                $ref: "#/definitions/Supplier"
+              message:
+                type: "string"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+  /suppliers/{supplierId}:
+    x-swagger-router-controller: suppliers
+    put:
+      tags:
+      - "Suppliers"
+      summary: "Update a supplier"
+      operationId: updateSupplier
+      description: "Modify a supplier"      
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "path"
+        name: "supplierId"
+        required: true
+        type: "integer"
+        format: "int64"
+      - in: "body"
+        name: "body"
+        description: "Supplier object with edited fields"
+        schema:
+          $ref: "#/definitions/SupplierModify"
+      responses:        
+        200:
+          description: "Success"        
+          schema:
+            type: "object"
+            properties:
+              data:
+                $ref: "#/definitions/Supplier"
+              message: 
+                type: "string"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+              code:
+                type: "integer"
+              message:
+                type: "string"
+        404:
+          description: "Supplier does not exist"
+definitions:
+  SupplierCreate:
+    type: "object"
+    description: "The model of a supplier object to create a supplier"
+    required:
+      - "name"
+      - "phone"
+      - "email"
+      - "shippingAddress"
+      - "terms"
+      - "currencyCode"
+    properties:
+      name:
+        type: "string"
+        description: "The name of the supplier"
+      phone:
+        type: "string"
+        description: "The phone number of the supplier"
+      email:
+        type: "string"
+        format: "email"
+        description: "The email of the supplier"
+      accountNum:
+        type: "string"
+        description: "The account number for the supplier"
+      businessNum:
+        type: "string"
+        description: "The business number for the supplier"
+      website:
+        type: "string"
+        description: "Website of the supplier"
+      contact:
+        type: "object"
+        properties:
+          name:
+            type: "string"
+            description: "The name of the contact"
+          email:
+            type: "string"
+            format: "email"
+            description: "The email of the contact"
+          phone:
+            type: "string"
+            description: "The phone number of the contact"
+      shippingAddress:
+        type: "string"
+        description: "The shipping address of the supplier"
+      billingAddress:
+        type: "string"
+        description: "The billing address of the supplier"
+      keywords:
+        type: "array"
+        items:
+          type: "string"
+        description: "The keywords that the supplier is associated with."
+      notes:
+        type: "string"
+        description: "A note about the supplier"
+      terms:
+        type: "string"
+        description: "Predefined terms of the supplier."
+      currencyCode:
+        type: "string"
+        enum:
+        - "CAD"
+        - "USD"
+        - "EUR"
+        description: "Currency code of the suppliers payment."
+      countryCode:
+        type: "string"
+        enum:
+        - "CAN"
+        - "USA"
+        description: "Country code of the supplier"
+      state:
+        type: "string"
+        description: "The province/state from Canada/USA."
+  Supplier:
+    type: "object"
+    description: "The model for a supplier as returned by the API"
+    properties:
+      id:
+        type: "integer"
+        format: "int64"
+        description: "The supplier id in the system"
+      name:
+        type: "string"
+        description: "The name of the supplier. No character restriction"
+      phone:
+        type: "string"
+        description: "The phone number of the supplier"
+      email:
+        type: "string"
+        format: "email"
+        description: "The email of the supplier"
+      accountNum:
+        type: "string"
+        description: "The account number for the supplier"
+      businessNum:
+        type: "string"
+        description: "The business number for the supplier"
+      contact:
+        type: "object"
+        properties:
+          name:
+            type: "string"
+            description: "The name of the contact"
+          email:
+            type: "string"
+            description: "The email of the contact"
+          phone:
+            type: "string"
+            description: "The phone number of the contact"
+      shippingAddress:
+        type: "string"
+        description: "The shipping address of the supplier"
+      billingAddress:
+        type: "string"
+        description: "The billing address of the supplier"
+      keywords:
+        type: "array"
+        items:
+          type: "string"
+        description: "The keywords that the supplier is associated with"
+      notes:
+        type: "string"
+        description: "A note on the supplier"
+      terms:
+        type: "string"
+      currencyCode:
+        type: "string"
+        enum:
+        - "CAD"
+        - "USD"
+        - "EUR"
+        description: "Currency code of the suppliers payment"
+      countryCode:
+        type: "string"
+        enum:
+        - "CAN"
+        - "USA"
+        description: "Country code of the supplier"
+      state:
+        type: "string"
+        description: "The province/state from Canada/USA"
+  SupplierModify:
+    type: "object"
+    description: "The model of a supplier object to update a supplier"
+    properties:
+      name:
+        type: "string"
+        description: "The name of the supplier"
+      phone:
+        type: "string"
+        description: "The phone number of the supplier"
+      email:
+        type: "string"
+        format: "email"
+        description: "The email of the supplier"
+      accountNum:
+        type: "string"
+        description: "The account number for the supplier"
+      businessNum:
+        type: "string"
+        description: "The business number for the supplier"
+      website:
+        type: "string"
+        description: "Website of the supplier"
+      contact:
+        type: "object"
+        properties:
+          name:
+            type: "string"
+            description: "The name of the contact"
+          email:
+            type: "string"
+            format: "email"
+            description: "The email of the contact"
+          phone:
+            type: "string"
+            description: "The phone number of the contact"
+      shippingAddress:
+        type: "string"
+        description: "The shipping address of the supplier"
+      billingAddress:
+        type: "string"
+        description: "The billing address of the supplier"
+      keywords:
+        type: "array"
+        items:
+          type: "string"
+        description: "The keywords that the supplier is associated with."
+      notes:
+        type: "string"
+        description: "A note about the supplier"
+      terms:
+        type: "string"
+        description: "Predefined terms of the supplier. If term is not found in the term table, the route shall 400"
+      currencyCode:
+        type: "string"
+        enum:
+        - "CAD"
+        - "USD"
+        - "EUR"
+        description: "Currency code of the suppliers payment. If currency code is not found in the currency table, the route shall 400"
+      countryCode:
+        type: "string"
+        enum:
+        - "CAN"
+        - "USA"
+        description: "Country code of the supplier"
+      state:
+        type: "string"
+        description: "The province/state from Canada/USA. This field will be an enum and it will be your responsibility to add them in. the enums will be the following values: ..."

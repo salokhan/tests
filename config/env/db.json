@@ -1,0 +1,24 @@
+{
+    "development": {
+        "username": "postgres",
+        "password": "sa",
+        "database": "test",          
+        "config": {
+            "host": "localhost",
+            "port": "5433",
+            "dialect": "postgres",
+            "logging": null
+        }
+    },
+    "test": {
+        "username": "postgres",
+        "password": "sa",
+        "database": "test",          
+        "config": {
+            "host": "localhost",
+            "port": "5433",
+            "dialect": "postgres",
+            "logging": null
+        }
+    }
+}

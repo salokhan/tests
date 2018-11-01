@@ -1,2 +1,1 @@
-# tests
-git learning
+# Skeleton project for Swagger
