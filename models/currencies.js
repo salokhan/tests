@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Currency model
+ * Currency model 
  */
 
 module.exports = (sequelize, DataTypes) => {
