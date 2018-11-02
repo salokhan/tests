@@ -31,6 +31,7 @@ module.exports.start = (done) => {
       logger.error('Could not start app', err);
       throw new Error('Could not start app');
     }
+    exports.countries = require('../tests/e2e/utils/countries');
     app.listen(port);
     logger.info('API listening on port', port);
     done();

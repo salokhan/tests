@@ -9,17 +9,17 @@ module.exports = (sequelize, DataTypes) => {
     'firstName': {'type': DataTypes.STRING, 'validate': {'min': 1, 'max': '15'}},
     'lastName' : {'type': DataTypes.STRING, 'validate': {'min': 1, 'max': '15'}},
     'email'    : {'type': DataTypes.STRING, 'unique': true, 'validate': {'isEmail': true}},
-    'username' : {
+    'userName' : {
       'type'      : DataTypes.STRING, 'primaryKey': true,
       'validate'  : {'is': /^([a-z0-9](?:-?[a-z0-9]){0,38})$/ig}
     },
-    'password_hash': DataTypes.STRING,
+    'passwordHash': DataTypes.STRING,
     'password'     : {
       'type': DataTypes.VIRTUAL,
       'set' : function(val) {
         // Remember to set the data value, otherwise it won't be validated
         this.setDataValue('password', val);
-        this.setDataValue('password_hash', this.salt + val);
+        this.setDataValue('passwordHash', this.salt + val);
       },
       'validate': {
         'isLongEnough': function(val) {
