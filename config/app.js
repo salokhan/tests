@@ -19,6 +19,10 @@ module.exports.start = (done) => {
       require('./compression')(app, cb);
     },
     (cb) => {
+      logger.info('Initializing DB');
+      require('./initDB')(app, cb);
+    },
+    (cb) => {
       logger.info('Initializing swagger middleware');
       require('./swagger')(app, cb);
     },

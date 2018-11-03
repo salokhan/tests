@@ -1,10 +1,10 @@
 swagger: "2.0"
 info:
-  description: "This is a sample swagger doc detailing the supplier POST route for upwork contracts"
+  description: "This is a sample swagger doc detailing the supplier POST route for learning"
   version: "0.0.1"
   title: "Distributable Swagger Doc"
   contact:
-    email: "daniel@mynuance.ca"
+    email: "im.solomon@Outlook.com"
 host: "localhost:8080"
 basePath: /api/v1
 schemes:
@@ -18,9 +18,96 @@ consumes:
 produces:
   - application/json
 tags:
+- name: "GeneralData"
+  description: "General Data Endpoints"
 - name: "Suppliers"
-  description: "Supplier Endpoints"
+  description: "General1 Data Endpoints"
 paths:
+  /countries:    
+    x-swagger-router-controller: countries
+    get:
+      tags:
+      - "GeneralData"
+      summary: "Get a list of countries"
+      operationId: getCountries
+      produces:
+      - "application/json"
+      parameters:
+      - in: "query"
+        name: "name"
+        description: "Name of the country"
+        type: "string"
+      - in: "query"
+        name: "field"
+        description: "Limit the fields to be returned"
+        type: "array"
+        uniqueItems: true
+        items:
+          type: string
+        default:
+          - '*'
+      - in: "query"
+        name: "sort"
+        description: "Field on which to sort the returned countries"
+        type: "string"
+      - in: "query"
+        name: "order"
+        description: "Order by which to order the sorted countries"
+        type: "string"
+        default: "ASC"
+        enum:
+          - "ASC"
+          - "DESC"
+      # - in: "query"
+      #   name: "limit"
+      #   description: "Limit the number of returned result"
+      #   type: "integer"
+      #   format: "int32"
+      #   default: 50
+      #   minimum: 1
+      # - in: "query"
+        # name: "offset"
+        # description: "Offset the number of returned result from an index of 0"
+        # type: "integer"
+        # format: "int64"
+        # default: 0
+        # minimum: 0
+      responses:
+        200:
+          description: "Successfully Retrieved Countries"
+          schema:
+            type: "object"
+            properties:
+              results:
+                type: "array"
+                items:
+                  $ref: "#/definitions/Country"
+              message: 
+                type: "string"
+                description: "If empty result, it shall state 'No results were found'. If results found, it shall state 'Found X result(s)"
+              total:
+                type: "integer"
+                description: "The actual number of suppliers found"
+              # offset:
+              #   type: "integer"
+              #   description: "The returned return offset from an index of 0"
+              # limit:
+              #   type: "integer"
+              #   description: "Limits the number of results returned"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
   /suppliers:    
     x-swagger-router-controller: suppliers
     get:
@@ -216,6 +303,16 @@ paths:
         404:
           description: "Supplier does not exist"
 definitions:
+  Country:
+    type: "object"
+    description: "The model for a country as returned by the API"
+    properties:
+      code:
+        type: "string"        
+        description: "The country code in the system"
+      name:
+        type: "string"
+        description: "The name of the country"
   SupplierCreate:
     type: "object"
     description: "The model of a supplier object to create a supplier"

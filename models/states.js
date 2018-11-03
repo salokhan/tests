@@ -13,28 +13,28 @@ module.exports = (sequlize, DataTypes) => {
         states.hasMany(models.Cities, { foreignKey: 'stateName', sourceKey: 'state' });
         states.belongsTo(models.Countries, { foreignKey: 'countryCode', targetKey: 'code' });
     }
-    states.bulkCreate(
-        [
-            {
-                'state': 'Federal',
-                'countryCode': 'PK'
-            },
-            {
-                'state': 'KPK',
-                'countryCode': 'PK'
-            },
-            {
-                'state': 'Punjab',
-                'countryCode': 'PK'
-            },
-            {
-                'state': 'Sindh',
-                'countryCode': 'PK'
-            },
-            {
-                'state': 'Baluchistan',
-                'countryCode': 'PK'
-            }
-        ]);
+    // states.bulkCreate(
+    //     [
+    //         {
+    //             'state': 'Federal',
+    //             'countryCode': 'PK'
+    //         },
+    //         {
+    //             'state': 'KPK',
+    //             'countryCode': 'PK'
+    //         },
+    //         {
+    //             'state': 'Punjab',
+    //             'countryCode': 'PK'
+    //         },
+    //         {
+    //             'state': 'Sindh',
+    //             'countryCode': 'PK'
+    //         },
+    //         {
+    //             'state': 'Baluchistan',
+    //             'countryCode': 'PK'
+    //         }
+    //     ]);
     return states;
 }
