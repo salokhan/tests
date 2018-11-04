@@ -1,4 +1,5 @@
 'use strict';
+const bcrypt = require('bcrypt');
 
 /*
  * Users Model
@@ -24,27 +25,21 @@ module.exports = (sequelize, DataTypes) => {
       'validate': { 'is': /^([a-z0-9](?:-?[a-z0-9]){0,38})$/ig },
       'primaryKey': true
     },
-    'passwordHash': DataTypes.STRING,
-    'password': {
-      'type': DataTypes.VIRTUAL,
-      'set': function (val) {
-        // Remember to set the data value, otherwise it won't be validated
-        this.setDataValue('password', val);
-        this.setDataValue('passwordHash', this.salt + val);
-      },
-      'validate': {
-        'isLongEnough': function (val) {
-          if (val.length < 5) {
-            throw new Error('Please choose a longer password');
-          }
-        }
-      }
-    },
+    'password': { 'type': DataTypes.STRING },
     'about': {
       'type': DataTypes.STRING,
       'validate': { 'max': { 'args': [15], 'msg': 'About must be less then 255 character' } }
     }
-  });
+  },
+    {
+      hooks: {
+        beforeCreate: (user, options) => {
+          {
+            user.password = user.password && user.password != "" ? bcrypt.hashSync(user.password, 10) : "";
+          }
+        }
+      }
+    });
 
   Users.associate = (models) => {
     Users.hasMany(models.ContactsPersonals, { foriegnKey: 'userName', sourceKey: 'userName' });

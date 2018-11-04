@@ -20,6 +20,8 @@ produces:
 tags:
 - name: "GeneralData"
   description: "General Data Endpoints"
+- name: "Users"
+  description: "User Data Endpoints"
 - name: "Suppliers"
   description: "General1 Data Endpoints"
 paths:
@@ -94,6 +96,49 @@ paths:
               # limit:
               #   type: "integer"
               #   description: "Limits the number of results returned"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+  
+  /users:    
+    x-swagger-router-controller: users
+    post:
+      tags:
+      - "Users"
+      summary: "Create a new user"
+      operationId: signup
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "User object that needs to be added to the database"
+        required: true
+        schema:
+          $ref: "#/definitions/UserSignup"
+      responses:
+        201:
+          description: "Successfully Created User"
+          schema:
+            type: "object"
+            properties:
+              data:
+                $ref: "#/definitions/UserNew"
+              message:
+                type: "string"
         400:
           description: "Invalid Input"
           schema:
@@ -303,6 +348,50 @@ paths:
         404:
           description: "Supplier does not exist"
 definitions:
+  UserSignup:
+    type: "object"
+    description: "The model of a user object to signup a user"
+    required:
+      - "userName"
+      - "firstName"
+      - "lastName"
+      - "email"
+      - "password"
+    properties:
+      userName:
+        type: "string"
+        description: "The username of the user. It will be used for login purpose"
+      firstName:
+        type: "string"
+        description: "The first name of the user"
+      lastName:
+        type: "string"
+        description: "The last name of the user"
+      email:
+        type: "string"
+        format: "email"
+        description: "The email of the user"
+      password:
+        type: "string"
+        description: "The password of the user"
+  
+  UserNew:
+    type: "object"
+    description: "The model for a new user as returned by the API"
+    properties:
+      userName:
+        type: "string"
+        description: "The user name of the user. will be used for login purpose"
+      firstName:
+        type: "string"
+        description: "The first name of the user"
+      lastName:
+        type: "string"
+        description: "The last name of the user"
+      email:
+        type: "string"
+        format: "email"
+        description: "The email of the user"
   Country:
     type: "object"
     description: "The model for a country as returned by the API"
