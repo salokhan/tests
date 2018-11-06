@@ -5,6 +5,7 @@ const fs = require('fs');
 const initializeSwagger = require('swagger-tools').initializeMiddleware;
 const jsonRefs = require('json-refs');
 const path = require('path');
+const auth = require('./helper/auth');
 const swaggerui = require('swagger-ui-express');
 const yaml = require('js-yaml');
 
@@ -23,20 +24,20 @@ module.exports = (app, done) => {
 
   initializeSwagger(swaggerObject, (swaggerMiddleware) => {
     app.use(swaggerMiddleware.swaggerMetadata());
+    app.use(swaggerMiddleware.swaggerSecurity({'Bearer': auth.verifyToken}));
     app.use(swaggerMiddleware.swaggerValidator());
     app.use(swaggerMiddleware.swaggerRouter({
       'controllers': path.resolve(__dirname, '../controllers'),
       'useStubs'   : false // Do not use mock stubs
     }));
-
     if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
       jsonRefs.resolveRefs(swaggerObject, {
         'filter'       : ['relative'],
         'loaderOptions': {'processContent': (res, cb) => cb(undefined, yaml.safeLoad(res.text))}
       }).then((result) => {
         app.use('/api-docs', swaggerui.serve, swaggerui.setup(result.resolved));
-        logger.info('Swagger UI generated');
         done();
+        logger.info('Swagger UI generated');
       }).catch((err) => {
         logger.info('Swagger UI failed to generate');
         done(err);

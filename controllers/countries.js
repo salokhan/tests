@@ -3,6 +3,7 @@
 const Promise = require('bluebird');
 const models = require('../models');
 const logger = require('../lib/logger');
+const auth = require('../config/helper/auth');
 
 module.exports = {
   // get countries
@@ -10,6 +11,9 @@ module.exports = {
     logger.log('Get called for counrtries');
     const result = {'results': [], 'message': '', 'total': ''};
     const query = req.query;
+
+
+    //const tokenString = auth.issueToken('salman', 'admin');
 
     const countryQuery = query.name ? {'name': {'$iLike': query.name}} : '';
     const countryAttribute = selectAttributes('Countries', query.field);

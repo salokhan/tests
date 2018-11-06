@@ -45,12 +45,12 @@ module.exports = {
     const userBody = req.body;
     logger.log('Post signup call for user');
     return models.Users.create({
-      'userName' : userBody.userName.trim(),
-      'firstName': userBody.firstName.trim(),
-      'lastName' : userBody.firstName.trim(),
-      'email'    : userBody.email.trim(),
-      'password' : userBody.password,
-      'where'    : {'userName': userBody.userName.trim()}
+      'userName': userBody.userName.trim(),
+      'pass'    : userBody.firstName.trim(),
+      'lastName': userBody.firstName.trim(),
+      'email'   : userBody.email.trim(),
+      'password': userBody.password,
+      'where'   : {'userName': userBody.userName.trim()}
 
     })
       .then((user) => {

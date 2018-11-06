@@ -2,7 +2,6 @@
 
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
-const session = require('express-session');
 module.exports = (app, cb) => {
   // Configure the request logger middleware
   //  Only if we're not in a test environment
@@ -10,13 +9,6 @@ module.exports = (app, cb) => {
     app.use(morgan('dev'));
   }
 
-  app.use(session(
-    {
-      'secret'           : 'salokhansalo',
-      'resave'           : true,
-      'saveUninitialized': true
-    }
-  ));
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({'extended': false}));
 

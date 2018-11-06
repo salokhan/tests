@@ -29,10 +29,6 @@ module.exports.start = (done) => {
     (cb) => {
       logger.info('Initializing express middleware');
       require('./express')(app, cb);
-    },
-    (cb) => {
-      logger.info('Initializing redies client');
-      require('./rediesClient')(app, cb);
     }
   ], (err) => {
     if (err) {
