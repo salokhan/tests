@@ -8,7 +8,7 @@ const issuer = 'my-awesome-website.com';
 // that need it (in our case, only /protected). This
 // function will be called every time a request to a protected
 // endpoint is received
-exports.verifyToken = (req, authOrSecDef, token, callback) => {
+exports.verifyToken = (req, authOrSecDef,token,cb) => {
   // these are the scopes/roles defined for the current endpoint
   const currentScopes = req.swagger.operation['x-security-scopes'];
 
@@ -37,7 +37,7 @@ exports.verifyToken = (req, authOrSecDef, token, callback) => {
           // can access it in the endpoint code if necessary
           req.auth = decodedToken;
           // if there is no error, just return null in the callback
-          return  callback(null);
+          return cb();
         }
         // return the error in the callback if there is one
         return sendError();
@@ -45,9 +45,10 @@ exports.verifyToken = (req, authOrSecDef, token, callback) => {
       // return the error in the callback if the JWT was not verified
       return sendError();
     });
-  }
+  } else {
   // return the error in the callback if the Authorization header doesn't have the correct format
-  return sendError();
+    sendError();
+  }
 };
 
 exports.issueToken = (username, role) => {

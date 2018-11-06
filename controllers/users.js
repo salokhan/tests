@@ -2,6 +2,8 @@
 
 const models = require('../models');
 const logger = require('../lib/logger');
+const bcrypt = require('bcrypt');
+const auth = require('../config/helper/auth');
 
 module.exports = {
   'signup': (req, response) => {
@@ -43,31 +45,25 @@ module.exports = {
 
   'login': (req, response) => {
     const userBody = req.body;
-    logger.log('Post signup call for user');
-    return models.Users.create({
-      'userName': userBody.userName.trim(),
-      'pass'    : userBody.firstName.trim(),
-      'lastName': userBody.firstName.trim(),
-      'email'   : userBody.email.trim(),
-      'password': userBody.password,
-      'where'   : {'userName': userBody.userName.trim()}
+    logger.log('Post login call for user');
+    return models.Users.findOne({
+      'where': {
+        'userName': userBody.userName.trim(),
+        
+      }
 
     })
       .then((user) => {
+        const tokenString = auth.issueToken(user.userName, 'user');
         const responseObj = {
           'data':
-                    {
-                      'userName' : user.userName,
-                      'firstName': user.firstName,
-                      'lastName' : user.lastName,
-                      'email'    : user.email
-                    },
-          'message': 'Successfully Created User'
+                    {'apiKey': tokenString},
+          'message': 'Successfully logged in User'
         };
         return response.status(200).send(responseObj);
       })
       .catch(models.Sequelize.EmptyResultError, (err) => {
-        response.status(400).send(invalidData(err, 400));
+        response.status(404).send(invalidData(err, 404));
       })
       .catch(models.Sequelize.ValidationError, (err) => {
         response.status(400).send(invalidData(err, 400));
