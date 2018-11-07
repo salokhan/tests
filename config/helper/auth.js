@@ -1,14 +1,21 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
-const sharedSecret = 'shh';
-const issuer = 'my-awesome-website.com';
+const issuer = 'localhost';
+const subject = 'salman';
+const audience = 'salman';
+const fs = require('fs');
+const path = require('path');
+const publicKey = fs.readFileSync(path.resolve(__dirname, './public.key'), 'utf8');
+const privateKey = fs.readFileSync(path.resolve(__dirname, './private.key'), 'utf8');
+
+const loggedOutToken = [];
 
 // Here we setup the security checks for the endpoints
 // that need it (in our case, only /protected). This
 // function will be called every time a request to a protected
 // endpoint is received
-exports.verifyToken = (req, authOrSecDef,token,cb) => {
+exports.verifyToken = (req, authOrSecDef, token, cb) => {
   // these are the scopes/roles defined for the current endpoint
   const currentScopes = req.swagger.operation['x-security-scopes'];
 
@@ -20,7 +27,7 @@ exports.verifyToken = (req, authOrSecDef,token,cb) => {
   if (token && token.indexOf('Bearer ') === 0) {
     const tokenString = token.split(' ')[1];
 
-    jwt.verify(tokenString, sharedSecret, (verificationError, decodedToken) => {
+    jwt.verify(tokenString, publicKey, (verificationError, decodedToken) => {
       // check if the JWT was verified correctly
       if (verificationError === null && Array.isArray(currentScopes) && decodedToken && decodedToken.role) {
         // check if the role is valid for this endpoint
@@ -50,12 +57,25 @@ exports.verifyToken = (req, authOrSecDef,token,cb) => {
     sendError();
   }
 };
+exports.logOutToken = (username, token) => {
+  loggedOutToken.push({'username': username, 'token': token});
+};
 
-exports.issueToken = (username, role) => {
+exports.issueToken = (username, role, iss) => {
   const token = jwt.sign({
-    'sub' : username,
-    'iss' : issuer,
+    // payload
+    'user': username,
     'role': role
-  }, sharedSecret);
+  },
+  // key 
+  privateKey,
+  {
+    // signoptions
+    'issuer'   : iss,
+    'subject'  : subject,
+    'audience' : audience,
+    'algorithm': 'RS256',
+    'expiresIn': '2h'
+  });
   return token;
 };

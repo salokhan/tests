@@ -46,19 +46,37 @@ module.exports = {
   'login': (req, response) => {
     const userBody = req.body;
     logger.log('Post login call for user');
-    return models.Users.findOne({
-      'where': {
-        'userName': userBody.userName.trim(),
-        
-      }
-
-    })
+    return models.Users.findOne({'where': {'userName': userBody.userName.trim()}})
       .then((user) => {
-        const tokenString = auth.issueToken(user.userName, 'user');
+        const tokenString = auth.issueToken(user.userName, 'user', req.hostname);
         const responseObj = {
           'data':
                     {'apiKey': tokenString},
           'message': 'Successfully logged in User'
+        };
+        return response.status(200).send(responseObj);
+      })
+      .catch(models.Sequelize.EmptyResultError, (err) => {
+        response.status(404).send(invalidData(err, 404));
+      })
+      .catch(models.Sequelize.ValidationError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch((err) => {
+        logger.error(err);
+        response.status(500).send();
+      });
+  },
+
+  'logout': (req, response) => {
+    const userBody = req.body;
+    logger.log('Post logout call for user');
+    return models.Users.findOne({'where': {'userName': userBody.userName.trim()}})
+      .then((user) => {
+        const responseObj = {
+          'data':
+                    {'apiKey': ''},
+          'message': 'Successfully logged out user'
         };
         return response.status(200).send(responseObj);
       })
