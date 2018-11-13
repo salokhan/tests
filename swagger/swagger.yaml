@@ -145,7 +145,6 @@ paths:
               message:
                 type: "string"
                 description: "The message associated to the error code"
-  
   /users/signup:    
     x-swagger-router-controller: users
     post:
@@ -217,7 +216,7 @@ paths:
               message:
                 type: "string"
         404:
-          description: "User not exist"
+          description: "Username or password is incorrect"
           schema:
             type: "object"
             properties:
@@ -273,7 +272,68 @@ paths:
               message:
                 type: "string"
         404:
-          description: "User not exist"
+          description: "Username or password is incorrect"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+  /users/updateGeneralDetails:    
+    x-swagger-router-controller: users
+    post:
+      tags:
+      - "Users"
+      summary: "Update user general details"
+      operationId: updateGeneralDetails
+      security:
+        - Bearer: []
+      x-security-scopes:
+        - user
+        - admin
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "User object that needs to be updated in the database"
+        required: true
+        schema:
+          $ref: "#/definitions/UserGeneralDetails"
+      responses:
+        200:
+          description: "Successfully Updated User General Details"
+          schema:
+            type: "object"
+            properties:
+              data:
+                $ref: "#/definitions/UserProfile"
+              message:
+                type: "string"
+        404:
+          description: "Username or password is incorrect"
           schema:
             type: "object"
             properties:
@@ -567,6 +627,47 @@ definitions:
         type: "string"
         format: "email"
         description: "The email of the user"
+  UserGeneralDetails:
+    type: "object"
+    description: "The model of a user object to update user general details"
+    required:      
+      - "firstName"
+      - "lastName"
+      - "gender"
+      - "title"
+    properties:
+      firstName:
+        type: "string"
+        description: "The first name of the user"
+      lastName:
+        type: "string"
+        description: "The last name of the user"
+      displayName:
+        type: "string"
+        description: "The display name of the user"
+      email:
+        type: "string"
+        format: "email"
+        description: "The email of the user"
+      about:
+        type: "string"
+        description: "The about of the user"
+      gender:
+        type: "string"
+        enum:
+        - "Male"
+        - "Female"
+        description: "The gender of the user"
+      title:
+        type: "string"
+        enum:
+        - "Mr"
+        - "Mrs"
+        - "Mss"
+        - "Ms"
+        - "Mx"
+        - "Dr"
+        description: "The title of the user"
   Country:
     type: "object"
     description: "The model for a country as returned by the API"
@@ -653,6 +754,32 @@ definitions:
       state:
         type: "string"
         description: "The province/state from Canada/USA."
+  UserProfile:
+    type: "object"
+    description: "The model for a new user profile as returned by the API"
+    properties:
+      title:
+        type: "string"
+        description: "The title of the user"
+      gender:
+        type: "string"
+        description: "The gender of the user"
+      firstName:
+        type: "string"
+        description: "The first name of the user"
+      lastName:
+        type: "string"
+        description: "The last name of the user"
+      displayName:
+        type: "string"
+        description: "The display name of the user"
+      email:
+        type: "string"
+        format: "email"
+        description: "The email of the user"
+      about:
+        type: "string"
+        description: "The about of the user"
   Supplier:
     type: "object"
     description: "The model for a supplier as returned by the API"
