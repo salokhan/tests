@@ -668,6 +668,10 @@ definitions:
         - "Mx"
         - "Dr"
         description: "The title of the user"
+      addressPersonal:
+        type: "object"
+        $ref: "#/definitions/Address"
+        
   Country:
     type: "object"
     description: "The model for a country as returned by the API"
@@ -678,6 +682,22 @@ definitions:
       name:
         type: "string"
         description: "The name of the country"
+  Address: 
+    type: "object"
+    description: "The model for address"
+    properties:
+      country:
+        type: "string"        
+        description: "The country name in the system"
+      state:
+        type: "string"
+        description: "The name of the state in the system"
+      city:
+        type: "string"
+        description: "The name of the city in the system"
+      addressLine:
+        type: "string"
+        description: "The address line of the user"
   SupplierCreate:
     type: "object"
     description: "The model of a supplier object to create a supplier"

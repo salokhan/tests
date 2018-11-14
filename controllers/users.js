@@ -1,5 +1,5 @@
 'use strict';
-
+const Promise = require('bluebird');
 const models = require('../models');
 const logger = require('../lib/logger');
 const bcrypt = require('bcrypt');
@@ -82,9 +82,21 @@ module.exports = {
     const userBody = req.body;
     const currentUser = req.auth.user;
     logger.log('Post login call for user general detail');
-    return models.Users.findOne({'where': {'userName': currentUser.trim()}, 'rejectOnEmpty': true})
+
+    return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
+      'userAddress': models.AddressPersonal.upsert(
+        {
+          'where'      : {'userName': currentUser},
+          'country'    : userBody.addressPersonal.country,
+          'state'      : userBody.addressPersonal.state,
+          'city'       : userBody.addressPersonal.city,
+          'addressLine': userBody.addressPersonal.addressLine,
+          'user'       : currentUser,
+          'transaction': t
+        })
+    }))
       .then((user) =>
-        user.update({
+        models.Users.update({
           'firstName'  : userBody && userBody.firstName ? userBody.firstName : user.firstName,
           'lastName'   : userBody && userBody.lastName ? userBody.lastName : user.lastName,
           'displayName': userBody && userBody.displayName ? userBody.displayName : '',
@@ -92,6 +104,15 @@ module.exports = {
           'about'      : userBody && userBody.about ? userBody.about : '',
           'gender'     : userBody && userBody.gender ? userBody.gender : user.gender,
           'title'      : userBody && userBody.title ? userBody.title : user.title
+        },
+        {'where': {'userName': currentUser.trim()}}
+        ))
+      .then(() =>
+        models.Users.findOne({
+          'where'  : {'userName': currentUser.trim()},
+          'include': [
+            {'model': models.AddressPersonal, 'attributes': ['country', 'state', 'city', 'addressLine']}
+          ]
         }))
       .then((user) => {
         const responseObj = {
