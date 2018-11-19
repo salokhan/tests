@@ -81,29 +81,85 @@ module.exports = {
   'updateGeneralDetails': (req, response) => {
     const userBody = req.body;
     const currentUser = req.auth.user;
+    const state = userBody.addressPersonal && userBody.addressPersonal.state;
+    const city = userBody.addressPersonal && userBody.addressPersonal.city;
+    const countryCode = userBody.addressPersonal && userBody.addressPersonal.country;
+    const contacts = userBody.contactsPersonal;
+    const Op = models.sequelize.Op;
     logger.log('Post login call for user general detail');
 
     return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
-      'userAddress': models.AddressPersonal.upsert(
-        {
-          'where'      : {'userName': currentUser},
-          'country'    : userBody.addressPersonal.country,
-          'state'      : userBody.addressPersonal.state,
-          'city'       : userBody.addressPersonal.city,
-          'addressLine': userBody.addressPersonal.addressLine,
-          'user'       : currentUser,
-          'transaction': t
-        })
+      'country': countryCode ? models.Countries.findOne({
+        'where'      : {'code': countryCode},
+        'transaction': t
+      }) : '',
+      'state': state ? models.States.findCreateFind({
+        'where'      : {'state': state, 'countryCode': countryCode},
+        'transaction': t
+      }) : '',
+      'city': city ? models.Cities.findCreateFind({
+        'where'      : {'city': city, 'countryCode': countryCode, 'stateName': state},
+        'transaction': t
+      }) : '',
+      // if address personal have address id update else find or create a new address
+      // eslint-disable-next-line no-nested-ternary
+      'userAddress': userBody.addressPersonal
+        ? userBody.addressPersonal && (!userBody.addressPersonal.addressID
+          || userBody.addressPersonal.addressID === '' || userBody.addressPersonal.addressID === 'string')
+          ? models.AddressPersonal.findOrCreate(
+            {
+              'defaults': {
+                'country'    : userBody.addressPersonal.country,
+                'state'      : userBody.addressPersonal.state,
+                'city'       : userBody.addressPersonal.city,
+                'addressLine': userBody.addressPersonal.addressLine
+              },
+              'where'      : {'UserUserName': currentUser.trim()},
+              'transaction': t
+            }).spread((createAddress) => createAddress)
+          : models.AddressPersonal.update(
+            {
+              'country'     : userBody.addressPersonal.country,
+              'state'       : userBody.addressPersonal.state,
+              'city'        : userBody.addressPersonal.city,
+              'addressLine' : userBody.addressPersonal.addressLine,
+              'UserUserName': currentUser.trim()
+            }, {
+              'where': {
+                'addressPersonalUUID': userBody.addressPersonal.addressID,
+                'UserUserName'       : currentUser.trim()
+              }
+            }).spread((updatedAddress) => updatedAddress)
+        : '',
+      'userContacts': Promise.map(contacts ? contacts : [], (contact) =>
+        models.ContactsPersonals.findCreateFind(
+          {
+            'where': {
+              [Op.or]  : [{'UserUserName': currentUser.trim()}, {'UserUserName': null}],
+              'contact': contact
+            },
+            // {'UserUserName': {[Op.or]: [currentUser.trim(), '']}, 'contact': contact},
+            'transaction': t
+          }).spread((createdContact) => createdContact)),
+      'user': models.Users.findOne({'where': {'userName': currentUser.trim()}})
     }))
-      .then((user) =>
+      .then((data) =>
+        Promise.props({
+          // set address only if new created isNAN is checked in case of update becuase it return numeric 0 or 1
+          'setAddress': data.userAddress && isNaN(data.userAddress)
+            ? data.user.setAddressPersonals(data.userAddress) : '',
+          'setContacts': data.userContacts ? data.user.setContactsPersonals(data.userContacts) : ''
+        })
+      )
+      .then(() =>
         models.Users.update({
-          'firstName'  : userBody && userBody.firstName ? userBody.firstName : user.firstName,
-          'lastName'   : userBody && userBody.lastName ? userBody.lastName : user.lastName,
+          'firstName'  : userBody && userBody.firstName ? userBody.firstName : '',
+          'lastName'   : userBody && userBody.lastName ? userBody.lastName : '',
           'displayName': userBody && userBody.displayName ? userBody.displayName : '',
           'email'      : userBody && userBody.email ? userBody.email : '',
           'about'      : userBody && userBody.about ? userBody.about : '',
-          'gender'     : userBody && userBody.gender ? userBody.gender : user.gender,
-          'title'      : userBody && userBody.title ? userBody.title : user.title
+          'gender'     : userBody && userBody.gender ? userBody.gender : '',
+          'title'      : userBody && userBody.title ? userBody.title : ''
         },
         {'where': {'userName': currentUser.trim()}}
         ))
@@ -111,28 +167,230 @@ module.exports = {
         models.Users.findOne({
           'where'  : {'userName': currentUser.trim()},
           'include': [
-            {'model': models.AddressPersonal, 'attributes': ['country', 'state', 'city', 'addressLine']}
+            {
+              'model'     : models.AddressPersonal,
+              'attributes': ['addressPersonalUUID', 'country', 'state', 'city', 'addressLine']
+            },
+            {'model': models.ContactsPersonals, 'attributes': ['contact']},
+            {
+              'model'  : models.UserProfessionalDetails,
+              'include': [
+                {'model': models.ProfessionalTags, 'required': true, 'attributes': ['tag']}
+              ]
+            }
           ]
-        }))
+        })
+      )
       .then((user) => {
-        const responseObj = {
-          'data': {
-            'title'      : user.title,
-            'gender'     : user.gender,
-            'firstName'  : user.firstName,
-            'lastName'   : user.lastName,
-            'displayName': user.displayName,
-            'email'      : user.email,
-            'about'      : user.about
-          },
-          'message': 'Successfully Updated User General Details'
-        };
-        return response.status(200).send(responseObj);
+        const resObj = userProfileResponseObject(user, 'Successfully Updated User General Details');
+        return response.status(200).send(resObj);
       })
       .catch(models.Sequelize.EmptyResultError, (err) => {
         response.status(404).send(InvalidUser(err, 404));
       })
       .catch(models.Sequelize.ValidationError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch(models.Sequelize.DatabaseError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch((err) => {
+        logger.error(err);
+        response.status(500).send();
+      });
+  },
+  'createOrUpdateProfessionalDetails': (req, response) => {
+    const userBody = req.body;
+    const currentUser = req.auth.user;
+    const category = userBody.category;
+    const experty = userBody.experty;
+    const description = userBody.description;
+    const isActive = userBody.isActive;
+    const tags = userBody.professionalTags;
+    logger.log('Post login call for user professional detail');
+    return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
+      'category': models.Categories.findCreateFind({'where': {'category': category}, 'transaction': t}),
+      'experty' : models.Experties.findCreateFind(
+        {
+          'where'      : {'CategoryCategory': category, 'experty': experty},
+          'transaction': t
+        }),
+      'userProfessionDetails': userBody
+       && userBody.professionalDetailID === ''
+        || userBody.professionalDetailID === 'string' ?  models.UserProfessionalDetails.findCreateFind(
+          {
+            'where'   : {'UserUserName': currentUser.trim()},
+            'defaults': {
+              'category'   : category,
+              'experty'    : experty,
+              'description': description,
+              'isActive'   : isActive
+            },
+            'transaction': t
+          }).spread((upd) => upd)
+        : models.UserProfessionalDetails.update(
+          {
+            'category'    : category,
+            'experty'     : experty,
+            'description' : description,
+            'isActive'    : isActive,
+            'UserUserName': currentUser,
+            'transaction' : t
+          },
+          {'where': {'professionalDetailsID': userBody.professionalDetailID, 'UserUserName': currentUser.trim()}}),
+      'professionalTags': Promise.map(tags ? tags : [], (tagString) =>
+        // Promise.map awaits for returned promises as well.
+        models.ProfessionalTags.findCreateFind({
+          'where'      : {'tag': tagString},
+          'transaction': t
+        })
+          .spread((tag) => tag)
+      ),
+      'user': models.Users.findOne(
+        {'where': {'userName': currentUser.trim()}, 'rejectOnEmpty': true}
+      )
+    }))
+      .then((userProps) =>
+        Promise.props({
+          'userProfessionalDetails': userProps.userProfessionDetails && isNaN(userProps.userProfessionDetails)
+            ? userProps.userProfessionDetails : models.UserProfessionalDetails.findOne({
+              'where': {
+                'professionalDetailsID': userBody.professionalDetailID,
+                'UserUserName'         : currentUser.trim()
+              }
+            }),
+          'user'            : userProps.user,
+          'ProfessionalTags': userProps.professionalTags
+        })
+
+      )
+      .then((userProp) =>
+        Promise.props({
+          'setProfessionalDetails': userProp.user.setUserProfessionalDetail(userProp.userProfessionalDetails),
+          'setProfessionalTags'   : userProp.userProfessionalDetails.setProfessionalTags(userProp.ProfessionalTags)
+        })
+      )
+      .then(() =>
+        models.Users.findOne({
+          'where'  : {'userName': currentUser.trim()},
+          'include': [
+            {'model': models.AddressPersonal, 'attributes': ['country', 'state', 'city', 'addressLine']},
+            {'model': models.ContactsPersonals, 'attributes': ['contact']},
+            {
+              'model'  : models.UserProfessionalDetails,
+              'include': [
+                {'model': models.ProfessionalTags, 'required': true, 'attributes': ['tag']}
+              ]
+            }
+          ]
+        })
+      )
+      .then((user) => {
+        const resObj = userProfileResponseObject(user, 'Successfully Updated User Professional Details');
+        return response.status(200).send(resObj);
+      })
+      .catch(models.Sequelize.EmptyResultError, (err) => {
+        response.status(404).send(InvalidUser(err, 404));
+      })
+      .catch(models.Sequelize.ValidationError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch(models.Sequelize.DatabaseError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch((err) => {
+        logger.error(err);
+        response.status(500).send();
+      });
+  },
+  'updateProfessionalDetails': (req, response) => {
+    const userBody = req.body;
+    const currentUser = req.auth.user;
+    const category = userBody.category;
+    const experty = userBody.experty;
+    const description = userBody.description;
+    const isActive = userBody.isActive;
+    const tags = userBody.professionalTags;
+    const professionalDetailsID  = req.swagger.params.professionalDetailID.value;
+    logger.log('Post login call for user professional detail');
+    return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
+      'category': models.Categories.findCreateFind({'where': {'category': category}, 'transaction': t}),
+      'experty' : models.Experties.findCreateFind(
+        {
+          'where'      : {'CategoryCategory': category, 'experty': experty},
+          'transaction': t
+        }),
+      'userProfessionDetails': models.UserProfessionalDetails.update(
+        {
+          'category'    : category,
+          'experty'     : experty,
+          'description' : description,
+          'isActive'    : isActive,
+          'UserUserName': currentUser,
+          'transaction' : t
+        },
+        {'where': {'professionalDetailsID': professionalDetailsID, 'UserUserName': currentUser.trim()}}),
+      'professionalTags': Promise.map(tags ? tags : [], (tagString) =>
+        // Promise.map awaits for returned promises as well.
+        models.ProfessionalTags.findCreateFind({
+          'where'      : {'tag': tagString},
+          'transaction': t
+        })
+          .spread((tag) => tag)
+      ),
+      'user': models.Users.findOne(
+        {'where': {'userName': currentUser.trim()}, 'rejectOnEmpty': true}
+      )
+    }))
+      .then((userProps) =>
+        Promise.props({
+          'userProfessionalDetails': models.UserProfessionalDetails.findOne(
+            {
+              'where': {
+                'professionalDetailsID': professionalDetailsID,
+                'UserUserName'         : currentUser.trim()
+              }
+            }),
+          'user'            : userProps.user,
+          'ProfessionalTags': userProps.professionalTags
+        })
+
+      )
+      .then((userProp) =>
+        Promise.props({
+          'setProfessionalDetails': userProp.user.setUserProfessionalDetail(userProp.userProfessionalDetails),
+          'setProfessionalTags'   : userProp.userProfessionalDetails.setProfessionalTags(userProp.ProfessionalTags)
+        })
+      )
+      .then(() =>
+        models.Users.findOne({
+          'where'  : {'userName': currentUser.trim()},
+          'include': [
+            {
+              'model'     : models.AddressPersonal,
+              'attributes': ['addressPersonalUUID', 'country', 'state', 'city', 'addressLine']
+            },
+            {'model': models.ContactsPersonals, 'attributes': ['contact']},
+            {
+              'model'  : models.UserProfessionalDetails,
+              'include': [
+                {'model': models.ProfessionalTags, 'required': true, 'attributes': ['tag']}
+              ]
+            }
+          ]
+        })
+      )
+      .then((user) => {
+        const resObj = userProfileResponseObject(user, 'Successfully Updated User Professional Details');
+        return response.status(200).send(resObj);
+      })
+      .catch(models.Sequelize.EmptyResultError, (err) => {
+        response.status(404).send(InvalidUser(err, 404));
+      })
+      .catch(models.Sequelize.ValidationError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch(models.Sequelize.DatabaseError, (err) => {
         response.status(400).send(invalidData(err, 400));
       })
       .catch((err) => {
@@ -163,6 +421,52 @@ module.exports = {
         response.status(500).send();
       });
   }
+};
+
+// user profile response object 
+const userProfileResponseObject = (user, message) => {
+  const userAddressPersonal = user.AddressPersonals
+  && user.AddressPersonals[0] && user.AddressPersonals[0].toJSON();
+  const userContactsPersonal = user.ContactsPersonals.map((contact) => contact.contact);
+  const professionalDetails = user.UserProfessionalDetail;
+  const professionalTags  = user.UserProfessionalDetail
+  && user.UserProfessionalDetail.ProfessionalTags
+    ? user.UserProfessionalDetail.ProfessionalTags.map((tag) => tag.tag) : [];
+
+  const responseObj = {
+    'data': {
+      'title'          : user.title,
+      'gender'         : user.gender,
+      'firstName'      : user.firstName,
+      'lastName'       : user.lastName,
+      'displayName'    : user.displayName,
+      'email'          : user.email,
+      'about'          : user.about,
+      'addressPersonal': {
+        'addressID': userAddressPersonal && userAddressPersonal.addressPersonalUUID
+          ? userAddressPersonal.addressPersonalUUID : '',
+        'country'    : userAddressPersonal && userAddressPersonal.country ? userAddressPersonal.country : '',
+        'state'      : userAddressPersonal && userAddressPersonal.state ? userAddressPersonal.state : '',
+        'city'       : userAddressPersonal && userAddressPersonal.city ? userAddressPersonal.city : '',
+        'addressLine': userAddressPersonal && userAddressPersonal.addressLine
+          ? userAddressPersonal.addressLine : ''
+      },
+      'contacts'           : userContactsPersonal,
+      'professionalDetails': {
+        'professionalDetailID': professionalDetails && professionalDetails.professionalDetailsID
+          ? professionalDetails.professionalDetailsID : '',
+        'category'   : professionalDetails && professionalDetails.category ? professionalDetails.category : '',
+        'experty'    : professionalDetails && professionalDetails.experty ? professionalDetails.experty : '',
+        'description': professionalDetails && professionalDetails.description
+          ? professionalDetails.description : '',
+        'isActive'        : professionalDetails && professionalDetails.isActive ? professionalDetails.isActive : '',
+        'professionalTags': professionalTags
+      }
+    },
+    'message': message
+  };
+
+  return responseObj;
 };
 
 // return status body

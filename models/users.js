@@ -82,10 +82,11 @@ module.exports = (sequelize, DataTypes) => {
       }
     });
 
-  Users.associate = (models) => {
-    Users.hasMany(models.ContactsPersonals, {'foriegnKey': 'userName', 'sourceKey': 'userName'});
-    Users.hasMany(models.AddressPersonal, {'foriegnKey': 'userName', 'sourceKey': 'userName'});
-  };
+   Users.associate = (models) => {
+     Users.hasMany(models.ContactsPersonals);
+     Users.hasMany(models.AddressPersonal);
+     Users.hasOne(models.UserProfessionalDetails);
+   };
 
   return Users;
 };

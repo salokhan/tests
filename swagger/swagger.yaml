@@ -360,6 +360,132 @@ paths:
               message:
                 type: "string"
                 description: "The message associated to the error code"
+  /users/createProfessionalDetails:    
+    x-swagger-router-controller: users
+    post:
+      tags:
+      - "Users"
+      summary: "Create user professional details"
+      operationId: createOrUpdateProfessionalDetails
+      security:
+        - Bearer: []
+      x-security-scopes:
+        - user
+        - admin
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "User professional details object that needs to be created in the database"
+        required: true
+        schema:
+          $ref: "#/definitions/UserProfessionalDetails"
+      responses:
+        200:
+          description: "Successfully Created User Professional Details"
+          schema:
+            type: "object"
+            properties:
+              data:
+                $ref: "#/definitions/UserProfile"
+              message:
+                type: "string"
+        404:
+          description: "Username or password is incorrect"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+  # /users/updateProfessionalDetails/{professionalDetailID}:    
+  #   x-swagger-router-controller: users
+  #   put:
+  #     tags:
+  #     - "Users"
+  #     summary: "Update user professional details"
+  #     operationId: updateProfessionalDetails
+  #     security:
+  #       - Bearer: []
+  #     x-security-scopes:
+  #       - user
+  #       - admin
+  #     consumes:
+  #     - "application/json"
+  #     produces:
+  #     - "application/json"
+  #     parameters:
+  #     - in: "path"
+  #       name: "professionalDetailID"
+  #       required: true
+  #       type: "string"
+  #     - in: "body"
+  #       name: "body"
+  #       description: "User professional details object that needs to be updated in the database"
+  #       required: true
+  #       schema:
+  #         $ref: "#/definitions/UserProfessionalDetails"
+  #     responses:
+  #       200:
+  #         description: "Successfully Updated User Professional Details"
+  #         schema:
+  #           type: "object"
+  #           properties:
+  #             data:
+  #               $ref: "#/definitions/UserProfile"
+  #             message:
+  #               type: "string"
+  #       404:
+  #         description: "Username or password is incorrect"
+  #         schema:
+  #           type: "object"
+  #           properties:
+  #             status:
+  #               type: "integer"
+  #               description: "The http status code"
+  #             code:
+  #               type: "integer"
+  #               description: "The error code"
+  #             message:
+  #               type: "string"
+  #               description: "The message associated to the error code"
+  #       400:
+  #         description: "Invalid Input"
+  #         schema:
+  #           type: "object"
+  #           properties:
+  #             status:
+  #               type: "integer"
+  #               description: "The http status code"
+  #             code:
+  #               type: "integer"
+  #               description: "The error code"
+  #             message:
+  #               type: "string"
+  #               description: "The message associated to the error code"
   /suppliers:    
     x-swagger-router-controller: suppliers
     get:
@@ -671,7 +797,38 @@ definitions:
       addressPersonal:
         type: "object"
         $ref: "#/definitions/Address"
-        
+      contactsPersonal:
+        type: "array"
+        items:
+          type: "string"
+          description: "contact number of the user"
+  UserProfessionalDetails:
+    type: "object"
+    description: "The model of a user object to update user professional details"
+    required:      
+      - "category"
+      - "experty"
+    properties:
+      professionalDetailID:
+        type: "string"
+        description: "The professional detail id of user"    
+      category:
+        type: "string"
+        description: "The professional category of user"
+      experty:
+        type: "string"
+        description: "The professional experty of user"
+      description:
+        type: "string"
+        description: "The description about user profession"
+      isActive:
+        type: "boolean"
+        description: "The description about user profile active state"
+      professionalTags:
+        type: "array"
+        items:
+          type: "string"
+        description: "The professional tags that the user professional detail is associated with."
   Country:
     type: "object"
     description: "The model for a country as returned by the API"
@@ -682,10 +839,25 @@ definitions:
       name:
         type: "string"
         description: "The name of the country"
+  Contacts: 
+    type: "object"
+    description: "The model for Contacts"
+    properties:
+      contact:
+        type: "string"        
+        description: "The contact number of the user"
   Address: 
     type: "object"
+    required:      
+    - "country"
+    - "state"
+    - "city"
+    - "addressLine"
     description: "The model for address"
     properties:
+      addressID:
+        type: "string"        
+        description: "The address id in the system"
       country:
         type: "string"        
         description: "The country name in the system"
@@ -800,6 +972,17 @@ definitions:
       about:
         type: "string"
         description: "The about of the user"
+      addressPersonal:
+        type: "object"
+        $ref: "#/definitions/Address"
+      contactsPersonal:
+        type: "array"
+        items:
+          type: "string"
+          description: "contact number of the user"
+      professionalDetails:
+        type: "object"
+        $ref: "#/definitions/UserProfessionalDetails"
   Supplier:
     type: "object"
     description: "The model for a supplier as returned by the API"
