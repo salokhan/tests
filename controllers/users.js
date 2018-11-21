@@ -199,7 +199,7 @@ module.exports = {
         response.status(500).send();
       });
   },
-  'createOrUpdateProfessionalDetails': (req, response) => {
+  'createProfessionalDetails': (req, response) => {
     const userBody = req.body;
     const currentUser = req.auth.user;
     const category = userBody.category;
@@ -215,29 +215,17 @@ module.exports = {
           'where'      : {'CategoryCategory': category, 'experty': experty},
           'transaction': t
         }),
-      'userProfessionDetails': userBody
-       && userBody.professionalDetailID === ''
-        || userBody.professionalDetailID === 'string' ?  models.UserProfessionalDetails.findCreateFind(
-          {
-            'where'   : {'UserUserName': currentUser.trim()},
-            'defaults': {
-              'category'   : category,
-              'experty'    : experty,
-              'description': description,
-              'isActive'   : isActive
-            },
-            'transaction': t
-          }).spread((upd) => upd)
-        : models.UserProfessionalDetails.update(
-          {
-            'category'    : category,
-            'experty'     : experty,
-            'description' : description,
-            'isActive'    : isActive,
-            'UserUserName': currentUser,
-            'transaction' : t
+      'userProfessionDetails': models.UserProfessionalDetails.findCreateFind(
+        {
+          'where'   : {'UserUserName': currentUser.trim()},
+          'defaults': {
+            'category'   : category,
+            'experty'    : experty,
+            'description': description,
+            'isActive'   : isActive
           },
-          {'where': {'professionalDetailsID': userBody.professionalDetailID, 'UserUserName': currentUser.trim()}}),
+          'transaction': t
+        }).spread((upd) => upd),
       'professionalTags': Promise.map(tags ? tags : [], (tagString) =>
         // Promise.map awaits for returned promises as well.
         models.ProfessionalTags.findCreateFind({
@@ -303,6 +291,80 @@ module.exports = {
         response.status(500).send();
       });
   },
+  'createWorkPlaceDetail': (req, response) => {
+    const userBody = req.body;
+    const currentUser = req.auth.user;
+    const workplace = userBody.workplace;
+    const countryCode = userBody.workplace.country;
+    const state = userBody.workplace.state;
+    const city = userBody.workplace.city;
+    logger.log('Post login call for user workplace detail');
+    return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
+      'country': countryCode ? models.Countries.findOne({
+        'where'      : {'code': countryCode},
+        'transaction': t
+      }) : '',
+      'state': state ? models.States.findCreateFind({
+        'where'      : {'state': state, 'countryCode': countryCode},
+        'transaction': t
+      }) : '',
+      'city': city ? models.Cities.findCreateFind({
+        'where'      : {'city': city, 'countryCode': countryCode, 'stateName': state},
+        'transaction': t
+      }) : '',
+      'workplace': models.WorkPlaces.findCreateFind(
+        {
+          'where': {
+            'title'      : workplace.title,
+            'country'    : countryCode,
+            'state'      : workplace.state,
+            'city'       : workplace.city,
+            'addressLine': workplace.addressLine
+          },
+          'transaction': t
+        }).spread((wp) => wp),
+      'workplacedetails': models.UserWorkPlaceDetails.findCreateFind(
+        {
+          'where'      : {'startTime': userBody.startTime, 'endTime': userBody.endTime},
+          'transaction': t
+        }).spread((wpd) => wpd)
+    }))
+      .then((userWorkPlaceProps) =>
+        userWorkPlaceProps.workplacedetails.setWorkPlaces(userWorkPlaceProps.workplace)
+      )
+      .then(() =>
+        models.Users.findOne({
+          'where'  : {'userName': currentUser.trim()},
+          'include': [
+            {'model': models.AddressPersonal, 'attributes': ['country', 'state', 'city', 'addressLine']},
+            {'model': models.ContactsPersonals, 'attributes': ['contact']},
+            {
+              'model'  : models.UserProfessionalDetails,
+              'include': [
+                {'model': models.ProfessionalTags, 'required': true, 'attributes': ['tag']}
+              ]
+            }
+          ]
+        })
+      )
+      .then((user) => {
+        const resObj = userProfileResponseObject(user, 'Successfully Updated User Professional Details');
+        return response.status(200).send(resObj);
+      })
+      .catch(models.Sequelize.EmptyResultError, (err) => {
+        response.status(404).send(InvalidUser(err, 404));
+      })
+      .catch(models.Sequelize.ValidationError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch(models.Sequelize.DatabaseError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch((err) => {
+        logger.error(err);
+        response.status(500).send();
+      });
+  },
   'updateProfessionalDetails': (req, response) => {
     const userBody = req.body;
     const currentUser = req.auth.user;
@@ -311,7 +373,7 @@ module.exports = {
     const description = userBody.description;
     const isActive = userBody.isActive;
     const tags = userBody.professionalTags;
-    const professionalDetailsID  = req.swagger.params.professionalDetailID.value;
+    const professionalDetailsID = req.swagger.params.professionalDetailID.value;
     logger.log('Post login call for user professional detail');
     return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
       'category': models.Categories.findCreateFind({'where': {'category': category}, 'transaction': t}),
@@ -426,11 +488,11 @@ module.exports = {
 // user profile response object 
 const userProfileResponseObject = (user, message) => {
   const userAddressPersonal = user.AddressPersonals
-  && user.AddressPersonals[0] && user.AddressPersonals[0].toJSON();
+    && user.AddressPersonals[0] && user.AddressPersonals[0].toJSON();
   const userContactsPersonal = user.ContactsPersonals.map((contact) => contact.contact);
   const professionalDetails = user.UserProfessionalDetail;
-  const professionalTags  = user.UserProfessionalDetail
-  && user.UserProfessionalDetail.ProfessionalTags
+  const professionalTags = user.UserProfessionalDetail
+    && user.UserProfessionalDetail.ProfessionalTags
     ? user.UserProfessionalDetail.ProfessionalTags.map((tag) => tag.tag) : [];
 
   const responseObj = {

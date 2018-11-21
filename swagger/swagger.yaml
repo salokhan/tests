@@ -366,7 +366,7 @@ paths:
       tags:
       - "Users"
       summary: "Create user professional details"
-      operationId: createOrUpdateProfessionalDetails
+      operationId: createProfessionalDetails
       security:
         - Bearer: []
       x-security-scopes:
@@ -382,7 +382,7 @@ paths:
         description: "User professional details object that needs to be created in the database"
         required: true
         schema:
-          $ref: "#/definitions/UserProfessionalDetails"
+          $ref: "#/definitions/CreateUpdateUserProfessionalDetails"
       responses:
         200:
           description: "Successfully Created User Professional Details"
@@ -421,71 +421,132 @@ paths:
               message:
                 type: "string"
                 description: "The message associated to the error code"
-  # /users/updateProfessionalDetails/{professionalDetailID}:    
-  #   x-swagger-router-controller: users
-  #   put:
-  #     tags:
-  #     - "Users"
-  #     summary: "Update user professional details"
-  #     operationId: updateProfessionalDetails
-  #     security:
-  #       - Bearer: []
-  #     x-security-scopes:
-  #       - user
-  #       - admin
-  #     consumes:
-  #     - "application/json"
-  #     produces:
-  #     - "application/json"
-  #     parameters:
-  #     - in: "path"
-  #       name: "professionalDetailID"
-  #       required: true
-  #       type: "string"
-  #     - in: "body"
-  #       name: "body"
-  #       description: "User professional details object that needs to be updated in the database"
-  #       required: true
-  #       schema:
-  #         $ref: "#/definitions/UserProfessionalDetails"
-  #     responses:
-  #       200:
-  #         description: "Successfully Updated User Professional Details"
-  #         schema:
-  #           type: "object"
-  #           properties:
-  #             data:
-  #               $ref: "#/definitions/UserProfile"
-  #             message:
-  #               type: "string"
-  #       404:
-  #         description: "Username or password is incorrect"
-  #         schema:
-  #           type: "object"
-  #           properties:
-  #             status:
-  #               type: "integer"
-  #               description: "The http status code"
-  #             code:
-  #               type: "integer"
-  #               description: "The error code"
-  #             message:
-  #               type: "string"
-  #               description: "The message associated to the error code"
-  #       400:
-  #         description: "Invalid Input"
-  #         schema:
-  #           type: "object"
-  #           properties:
-  #             status:
-  #               type: "integer"
-  #               description: "The http status code"
-  #             code:
-  #               type: "integer"
-  #               description: "The error code"
-  #             message:
-  #               type: "string"
-  #               description: "The message associated to the error code"
+  /users/updateProfessionalDetails/{professionalDetailID}:    
+    x-swagger-router-controller: users
+    put:
+      tags:
+      - "Users"
+      summary: "Update user professional details"
+      operationId: updateProfessionalDetails
+      security:
+        - Bearer: []
+      x-security-scopes:
+        - user
+        - admin
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "path"
+        name: "professionalDetailID"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "body"
+        description: "User professional details object that needs to be updated in the database"
+        required: true
+        schema:
+          $ref: "#/definitions/CreateUpdateUserProfessionalDetails"
+      responses:
+        200:
+          description: "Successfully Updated User Professional Details"
+          schema:
+            type: "object"
+            properties:
+              data:
+                $ref: "#/definitions/UserProfile"
+              message:
+                type: "string"
+        404:
+          description: "Username or password is incorrect"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+  /users/createWorkPlaceDetail:    
+    x-swagger-router-controller: users
+    post:
+      tags:
+      - "Users"
+      summary: "Create user workplace detail"
+      operationId: createWorkPlaceDetail
+      security:
+        - Bearer: []
+      x-security-scopes:
+        - user
+        - admin
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "User workplace object that needs to be updated in the database"
+        required: true
+        schema:
+          $ref: "#/definitions/CreateUpdateWorkPlaceDetail"
+      responses:
+        200:
+          description: "Successfully Created User WorkPlace Detail"
+          schema:
+            type: "object"
+            properties:
+              data:
+                $ref: "#/definitions/UserProfile"
+              message:
+                type: "string"
+        404:
+          description: "Username or password is incorrect"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
+        400:
+          description: "Invalid Input"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "integer"
+                description: "The http status code"
+              code:
+                type: "integer"
+                description: "The error code"
+              message:
+                type: "string"
+                description: "The message associated to the error code"
   /suppliers:    
     x-swagger-router-controller: suppliers
     get:
@@ -829,6 +890,47 @@ definitions:
         items:
           type: "string"
         description: "The professional tags that the user professional detail is associated with."
+  CreateUpdateUserProfessionalDetails:
+    type: "object"
+    description: "The model of a user object to update user professional details"
+    required:      
+      - "category"
+      - "experty"
+    properties:
+      category:
+        type: "string"
+        description: "The professional category of user"
+      experty:
+        type: "string"
+        description: "The professional experty of user"
+      description:
+        type: "string"
+        description: "The description about user profession"
+      isActive:
+        type: "boolean"
+        description: "The description about user profile active state"
+      professionalTags:
+        type: "array"
+        items:
+          type: "string"
+        description: "The professional tags that the user professional detail is associated with."
+  CreateUpdateWorkPlaceDetail:
+    type: "object"
+    description: "The model of a user object to create or update user work place detail"
+    required:      
+      - "startTime"
+      - "endTime"
+      - "workplace"
+    properties:
+      startTime:
+        type: "string"
+        description: "The start work time of the user"
+      endTime:
+        type: "string"
+        description: "The end work time of the user"
+      workplace:
+        type: "object"
+        $ref: "#/definitions/WorkPlace"
   Country:
     type: "object"
     description: "The model for a country as returned by the API"
@@ -846,6 +948,31 @@ definitions:
       contact:
         type: "string"        
         description: "The contact number of the user"
+  WorkPlace:
+    type: "object"
+    required:      
+    - "title"
+    - "country"
+    - "state"
+    - "city"
+    - "addressLine"
+    description: "The model for a workplace as returned by the API"
+    properties:
+      title:
+        type: "string"        
+        description: "The title of the workplace"
+      country:
+        type: "string"        
+        description: "The country of the workplace in the system"
+      state:
+        type: "string"        
+        description: "The state of the workplace in the system"
+      city:
+        type: "string"        
+        description: "The city of the workplace in the system"
+      addressLine:
+        type: "string"        
+        description: "The addressLine of the workplace in the system"
   Address: 
     type: "object"
     required:      
