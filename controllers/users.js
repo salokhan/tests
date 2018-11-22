@@ -298,6 +298,7 @@ module.exports = {
     const countryCode = userBody.workplace.country;
     const state = userBody.workplace.state;
     const city = userBody.workplace.city;
+    const Op = models.sequelize.Op;
     logger.log('Post login call for user workplace detail');
     return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
       'country': countryCode ? models.Countries.findOne({
@@ -322,15 +323,29 @@ module.exports = {
             'addressLine': workplace.addressLine
           },
           'transaction': t
-        }).spread((wp) => wp),
-      'workplacedetails': models.UserWorkPlaceDetails.findCreateFind(
-        {
-          'where'      : {'startTime': userBody.startTime, 'endTime': userBody.endTime},
-          'transaction': t
-        }).spread((wpd) => wpd)
+        }).spread((wp) => wp)
     }))
       .then((userWorkPlaceProps) =>
-        userWorkPlaceProps.workplacedetails.setWorkPlaces(userWorkPlaceProps.workplace)
+        Promise.props({
+          'workplace'       : userWorkPlaceProps.workplace,
+          'workplacedetails': models.UserWorkPlaceDetails.findCreateFind({
+            'where': {
+              [Op.or]: [{'WorkPlaceWorkplaceID': userWorkPlaceProps.workplace.workplaceID},
+                {
+                  'startTime': userBody.startTime,
+                  'endTime'  : userBody.endTime
+                }]
+            },
+            'defaults': {
+              'startTime': userBody.startTime,
+              'endTime'  : userBody.endTime
+            }
+
+          }).spread((wpd) => wpd)
+        })
+      )
+      .then((userWorkPlaceProps) =>
+        userWorkPlaceProps.workplacedetails.setWorkPlace(userWorkPlaceProps.workplace)
       )
       .then(() =>
         models.Users.findOne({

@@ -15,9 +15,9 @@ module.exports = (sequelize, DataTypes) => {
     'city'       : {'type': DataTypes.STRING, 'unique': 'unWorkPlace'},
     'addressLine': {'type': DataTypes.STRING, 'unique': 'unWorkPlace'}
   });
-  workplaces.associate = (models) => {
-    workplaces.hasOne(models.UserWorkPlaceDetails, {'through': 'UserWorkPlaces'});
-  };
+  // workplaces.associate = (models) => {
+  //   workplaces.hasOne(models.UserWorkPlaceDetails);
+  // };
 
   return workplaces;
 };

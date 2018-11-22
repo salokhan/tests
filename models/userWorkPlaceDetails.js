@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   });
   userwokplacedetails.associate = (models) => {
-    userwokplacedetails.belongsToMany(models.WorkPlaces, {'through': 'UserWorkPlaces'});
+    userwokplacedetails.belongsTo(models.WorkPlaces);
   };
   return userwokplacedetails;
 };
