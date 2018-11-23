@@ -323,18 +323,127 @@ module.exports = {
             'addressLine': workplace.addressLine
           },
           'transaction': t
-        }).spread((wp) => wp)
+        }).spread((wp) => wp),
+      'user': models.Users.findOne(
+        {'where': {'userName': currentUser.trim()}, 'rejectOnEmpty': true}
+      )
     }))
       .then((userWorkPlaceProps) =>
         Promise.props({
+          'user'            : userWorkPlaceProps.user,
           'workplace'       : userWorkPlaceProps.workplace,
           'workplacedetails': models.UserWorkPlaceDetails.findCreateFind({
             'where': {
               [Op.or]: [{'WorkPlaceWorkplaceID': userWorkPlaceProps.workplace.workplaceID},
                 {
+                  [Op.and]: [{'startTime': {[Op.lte]: Date.parse(userBody.endTime)}},
+                    {'endTime': {[Op.gte]: Date.parse(userBody.startTime)}}]
+                }]
+            },
+            'defaults': {
+              'startTime': Date.parse(userBody.startTime),
+              'endTime'  : Date.parse(userBody.endTime)
+            }
+
+          }).spread((wpd) => wpd)
+        })
+      )
+      .then((userWorkPlaceProps) => {
+        if (userWorkPlaceProps.workplacedetails
+        && userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === ''
+         || userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === null) {
+          return Promise.props({
+            'setWorkplaceDetail': userWorkPlaceProps.workplacedetails
+             && userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === ''
+              || userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === null
+              ? userWorkPlaceProps.workplacedetails.setWorkPlace(userWorkPlaceProps.workplace) : '',
+            'setUser': userWorkPlaceProps.user.addUserWorkPlaceDetail(userWorkPlaceProps.workplacedetails)
+          });
+        }
+        throw invalidTimeOrOverlapError();
+      })
+      .then(() =>
+        models.Users.findOne({
+          'where'  : {'userName': currentUser.trim()},
+          'include': [
+            {'model': models.AddressPersonal, 'attributes': ['country', 'state', 'city', 'addressLine']},
+            {'model': models.ContactsPersonals, 'attributes': ['contact']},
+            {
+              'model'  : models.UserProfessionalDetails,
+              'include': [
+                {'model': models.ProfessionalTags, 'required': true, 'attributes': ['tag']}
+              ]
+            }
+          ]
+        })
+      )
+      .then((user) => {
+        const resObj = userProfileResponseObject(user, 'Successfully Updated User Professional Details');
+        return response.status(200).send(resObj);
+      })
+      .catch(invalidTimeOrOverlapError, (err) => {
+        response.status(404).send(InvalidTime(err, 404));
+      })
+      .catch(models.Sequelize.EmptyResultError, (err) => {
+        response.status(404).send(InvalidUser(err, 404));
+      })
+      .catch(models.Sequelize.ValidationError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch(models.Sequelize.DatabaseError, (err) => {
+        response.status(400).send(invalidData(err, 400));
+      })
+      .catch((err) => {
+        logger.error(err);
+        response.status(500).send();
+      });
+  },
+  'updateWorkPlaceDetail': (req, response) => {
+    const userBody = req.body;
+    const currentUser = req.auth.user;
+    const workplace = userBody.workplace;
+    const countryCode = userBody.workplace.country;
+    const state = userBody.workplace.state;
+    const city = userBody.workplace.city;
+    const Op = models.sequelize.Op;
+    const workplceDetailsID = req.swagger.params.workplceDetailsID.value;
+    logger.log('Post login call for user workplace detail');
+    return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
+      'country': countryCode ? models.Countries.findOne({
+        'where'      : {'code': countryCode},
+        'transaction': t
+      }) : '',
+      'state': state ? models.States.findCreateFind({
+        'where'      : {'state': state, 'countryCode': countryCode},
+        'transaction': t
+      }) : '',
+      'city': city ? models.Cities.findCreateFind({
+        'where'      : {'city': city, 'countryCode': countryCode, 'stateName': state},
+        'transaction': t
+      }) : '',
+      'workplace': models.WorkPlaces.findCreateFind(
+        {
+          'where': {
+            'title'      : workplace.title,
+            'country'    : countryCode,
+            'state'      : workplace.state,
+            'city'       : workplace.city,
+            'addressLine': workplace.addressLine
+          },
+          'transaction': t
+        }).spread((wp) => wp)
+    }))
+      .then((userWorkPlaceProps) =>
+        Promise.props({
+          'workplace'       : userWorkPlaceProps.workplace,
+          'workplacedetails': models.UserWorkPlaceDetails.update({
+            'where': {
+              [Op.or]: [{'WorkPlaceWorkplaceID': userWorkPlaceProps.workplace.workplaceID},
+                {
                   'startTime': userBody.startTime,
                   'endTime'  : userBody.endTime
-                }]
+                }],
+              'workplaceDetailsID': workplceDetailsID
             },
             'defaults': {
               'startTime': userBody.startTime,
@@ -561,6 +670,20 @@ const InvalidUser = (err, status) => ({
   'message': 'Username or password is incorrect',
   'error'  : err
 });
+
+// return status body
+const InvalidTime = (err, status) => ({
+  'status' : status,
+  'code'   : err.code,
+  'message': 'Invalid time or time overlap',
+  'error'  : err
+});
+
+const invalidTimeOrOverlapError = () => {
+  const error = new Error('Invalid time or time overlap');
+  error.name = 'invalidTimeOrOverlapError';
+  return error;
+};
 
 const invalidUsernameOrPasswordError = () => {
   const error = new Error('Username or password is incorrect');
