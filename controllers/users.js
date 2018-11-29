@@ -350,11 +350,11 @@ module.exports = {
       )
       .then((userWorkPlaceProps) => {
         if (userWorkPlaceProps.workplacedetails
-        && userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === ''
-         || userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === null) {
+          && userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === ''
+          || userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === null) {
           return Promise.props({
             'setWorkplaceDetail': userWorkPlaceProps.workplacedetails
-             && userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === ''
+              && userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === ''
               || userWorkPlaceProps.workplacedetails.WorkPlaceWorkplaceID === null
               ? userWorkPlaceProps.workplacedetails.setWorkPlace(userWorkPlaceProps.workplace) : '',
             'setUser': userWorkPlaceProps.user.addUserWorkPlaceDetail(userWorkPlaceProps.workplacedetails)
@@ -406,7 +406,7 @@ module.exports = {
     const state = userBody.workplace.state;
     const city = userBody.workplace.city;
     const Op = models.sequelize.Op;
-    const workplceDetailsID = req.swagger.params.workplceDetailsID.value;
+    const workplaceDetailsID = req.swagger.params.workplaceDetailsID.value;
     logger.log('Post login call for user workplace detail');
     return models.sequelize.transaction({'autocommit': true}, (t) => Promise.props({
       'country': countryCode ? models.Countries.findOne({
@@ -431,31 +431,53 @@ module.exports = {
             'addressLine': workplace.addressLine
           },
           'transaction': t
-        }).spread((wp) => wp)
-    }))
-      .then((userWorkPlaceProps) =>
-        Promise.props({
-          'workplace'       : userWorkPlaceProps.workplace,
-          'workplacedetails': models.UserWorkPlaceDetails.update({
-            'where': {
-              [Op.or]: [{'WorkPlaceWorkplaceID': userWorkPlaceProps.workplace.workplaceID},
-                {
-                  'startTime': userBody.startTime,
-                  'endTime'  : userBody.endTime
-                }],
-              'workplaceDetailsID': workplceDetailsID
-            },
-            'defaults': {
-              'startTime': userBody.startTime,
-              'endTime'  : userBody.endTime
+        }).spread((wp) => wp),
+      'workplaceDetail': models.UserWorkPlaceDetails.findOne({
+        'where': {
+          [Op.and]: [
+            {'UserUserName': currentUser.trim()},
+            {'workplaceDetailsID': {[Op.ne]: workplaceDetailsID}},
+            {
+              [Op.and]: [{'startTime': {[Op.lte]: Date.parse(userBody.endTime)}},
+                {'endTime': {[Op.gte]: Date.parse(userBody.startTime)}}]
             }
+          ]
+        }
+      }),
+      'user': models.Users.findOne(
+        {'where': {'userName': currentUser.trim()}, 'rejectOnEmpty': true}
+      )
+    }))
+      .then((userWorkPlaceProps) => {
+        // if the record with time overlap found thorw timeoverlap exception else delete and create
+        if (userWorkPlaceProps.workplaceDetail) {
+          throw invalidTimeOrOverlapError();
+        } else {
+          return Promise.props({
+            'user'                  : userWorkPlaceProps.user,
+            'workplace'             : userWorkPlaceProps.workplace,
+            'updateWorkplacedetails': models.UserWorkPlaceDetails.update({
+              'startTime'           : Date.parse(userBody.startTime),
+              'endTime'             : Date.parse(userBody.endTime),
+              'WorkPlaceWorkplaceID': userWorkPlaceProps.workplace.workplaceID
+            },
+            {
+              'where':
+                {
+                  'UserUserName'      : currentUser.trim(),
+                  'workplaceDetailsID': workplaceDetailsID
+                }
+            }).spread((wpd) => wpd),
+            'workplacedetails': models.UserWorkPlaceDetails.findOne({
+              'where': {
+                'UserUserName'      : currentUser.trim(),
+                'workplaceDetailsID': workplaceDetailsID
+              }
+            })
 
-          }).spread((wpd) => wpd)
-        })
-      )
-      .then((userWorkPlaceProps) =>
-        userWorkPlaceProps.workplacedetails.setWorkPlace(userWorkPlaceProps.workplace)
-      )
+          });
+        }
+      })
       .then(() =>
         models.Users.findOne({
           'where'  : {'userName': currentUser.trim()},
@@ -474,6 +496,9 @@ module.exports = {
       .then((user) => {
         const resObj = userProfileResponseObject(user, 'Successfully Updated User Professional Details');
         return response.status(200).send(resObj);
+      })
+      .catch(invalidTimeOrOverlapError, (err) => {
+        response.status(404).send(InvalidTime(err, 404));
       })
       .catch(models.Sequelize.EmptyResultError, (err) => {
         response.status(404).send(InvalidUser(err, 404));
